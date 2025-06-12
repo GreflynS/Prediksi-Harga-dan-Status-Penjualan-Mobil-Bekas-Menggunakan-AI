@@ -1,9 +1,9 @@
 # **Prediksi Harga dan Status Penjualan Mobil Bekas Menggunakan AI**
 
 ### 👥 Anggota
-- Greflyn  
-- Reyza  
-- Evanly  
+- Greflyn Felinstya Salhuteru_1203220024
+- Reyza Syaifullah Sully_1203220045
+- Evanly Bawalo_1203220136
 
 ---
 
