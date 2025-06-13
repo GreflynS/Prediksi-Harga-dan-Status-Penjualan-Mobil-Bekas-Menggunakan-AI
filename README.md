@@ -99,33 +99,70 @@ df_class['Car Sale Status'] = df_class['Car Sale Status'].map({'un sold': 0, 'so
 X_class = df_class[class_features]
 y_class = df_class['Car Sale Status']
 
-X_train_class, X_test_class, y_train_class, y_test_class = train_test_split(X_class, y_class, test_size=0.2, random_state=42)
+X_train_class, X_test_class, y_train_class, y_test_class = train_test_split(
+    X_class, y_class, test_size=0.2, random_state=42)
 
 class_model = RandomForestClassifier(n_estimators=100, random_state=42)
 class_model.fit(X_train_class, y_train_class)
 
 y_pred_class = class_model.predict(X_test_class)
 
-print("Classification Report:")
-print(classification_report(y_test_class, y_pred_class))
+report = classification_report(y_test_class, y_pred_class, target_names=['0', '1'])
+report_div = Div(text=f"<pre>{report}</pre>", width=500, height=200)
 
-# Confusion matrix
-cm = confusion_matrix(y_test_class, y_pred_class)
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
-plt.title("Confusion Matrix")
-plt.xlabel("Predicted")
-plt.ylabel("Actual")
-plt.show()
+df_result = X_test_class.copy()
+df_result['Actual'] = y_test_class.values
+df_result['Predicted'] = y_pred_class
+
+cm_counts = df_result.groupby(['Actual', 'Predicted']).size().reset_index(name='Jumlah')
+cm_means = df_result.groupby(['Actual', 'Predicted'])[class_features].mean().reset_index()
+cm_full_df = pd.merge(cm_counts, cm_means, on=['Actual', 'Predicted'], how='left')
+cm_full_df['Actual'] = cm_full_df['Actual'].astype(str)
+cm_full_df['Predicted'] = cm_full_df['Predicted'].astype(str)
+
+source_matrix = ColumnDataSource(cm_full_df)
+
+mapper = LinearColorMapper(palette=Blues256, low=cm_full_df.Jumlah.max(), high=cm_full_df.Jumlah.min())
+
+p_matrix = figure(title="Heatmap Confusion Matrix",
+                  x_range=['0', '1'], y_range=['1', '0'],
+                  x_axis_label='Predicted', y_axis_label='Actual',
+                  toolbar_location=None, tools="", width=500, height=400)
+
+p_matrix.rect(x='Predicted', y='Actual', width=1, height=1, source=source_matrix,
+              fill_color={'field': 'Jumlah', 'transform': mapper}, line_color='white')
+
+hover_matrix = HoverTool(tooltips=[
+    ("Predicted", "@Predicted"),
+    ("Actual", "@Actual"),
+    ("Jumlah", "@Jumlah"),
+    ("AVG Mileage-KM", "@{Mileage-KM}{0.0}"),
+    ("AVG Engine Power-HP", "@{Engine Power-HP}{0.0}"),
+    ("AVG Manufactured Year", "@{Manufactured Year}{0.0}"),
+    ("AVG Purchased Price-$", "@{Purchased Price-$}{0.0}")
+])
+p_matrix.add_tools(hover_matrix)
+p_matrix.xgrid.grid_line_color = None
+p_matrix.ygrid.grid_line_color = None
+p_matrix.axis.major_label_text_font_size = "12pt"
+p_matrix.title.text_font_size = '14pt'
+
+color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="10pt",
+                     label_standoff=8, border_line_color="black", location=(0,0))
+
+p_matrix.add_layout(color_bar, 'right')
+layout = column(p_matrix, report_div)
+show(layout)
 ```
 Menggunakan Random Forest Classifier untuk memprediksi apakah mobil akan laku atau tidak. Hasil evaluasi berupa classification report dan confusion matrix
 
 #### a. Classification Report
-![image](https://github.com/user-attachments/assets/f5b57d08-1109-4426-9d93-1969909c94e8)
+![image](https://github.com/user-attachments/assets/be344c7b-df1c-45c2-85d6-b99ced6ac61e)
 
 Hasil evaluasi dari model classification, dapat diprediksi apakah mobil akan laku (sold = 1) atau tidak laku (un sold = 0).Dari hasil ini bisa disimpulkan bahwa model classification kami saat ini lebih cenderung fokus pada mobil yang tidak terjual, dan masih kesulitan dalam memprediksi mobil yang terjual. Karena kemungkinan ketidakseimbangan data yang jumlah un sold (1604)  jauh lebih banyak daripada sold(396).
 
 #### b. Confusion Matrix
-![image](https://github.com/user-attachments/assets/efb4f731-0dab-44fd-9ffa-23e79ceda893)
+![image](https://github.com/user-attachments/assets/7e3053ea-e045-4c70-8e01-e4d7c3b4ce88)
 
 Gambar confusion matrix menunjukkan hasil prediksi model terhadap status penjualan mobil. Kotak yang berwarna biru tua menandakan banyak data yang diprediksi dengan benar, yaitu mobil yang seharusnya sold berhasil diprediksi sold (True Positive) dan mobil yang seharusnya un sold diprediksi un sold (True Negative). Sementara kotak yang berwarna lebih muda menandakan jumlah kesalahan prediksi, yaitu mobil yang seharusnya sold tapi diprediksi un sold (False Negative), atau mobil yang seharusnya un sold tapi diprediksi sold (False Positive). Semakin gelap warna biru, semakin banyak data di area tersebut, artinya prediksi model pada bagian itu semakin bagus.
 
